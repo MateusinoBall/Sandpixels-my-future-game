@@ -3,219 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sandpixels</title>
+    <title>Sandpixels - Sandbox Simulator</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
         }
 
         body {
-            background-color: #1a1a1a;
-            color: #ffffff;
+            background-color: #121212;
+            color: #e0e0e0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
-            overflow: hidden;
+            padding: 20px;
         }
 
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            letter-spacing: 2px;
-            color: #ffcc00;
-            text-shadow: 2px 2px #000;
+            font-size: 2.2rem;
+            color: #4caf50;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
-        p {
+        .subtitle {
             font-size: 0.9rem;
-            margin-bottom: 20px;
-            color: #aaaaaa;
+            color: #888;
+            margin-bottom: 15px;
         }
 
-        #game-container {
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        #canvas-container {
             position: relative;
             background: #000000;
-            border: 4px solid #333333;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 3px solid #2d2d2d;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            overflow: hidden;
+            width: 100%;
         }
 
         canvas {
             display: block;
+            width: 100%;
+            height: auto;
             image-rendering: pixelated;
             cursor: crosshair;
         }
 
-        .controls {
-            margin-top: 15px;
+        /* Interface estilo Sandboxels */
+        .ui-panel {
+            background-color: #1e1e1e;
+            border: 1px solid #2d2d2d;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .category-row {
             display: flex;
-            gap: 15px;
+            gap: 8px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+            overflow-x: auto;
         }
 
-        button {
-            background-color: #333333;
-            color: white;
-            border: 2px solid #555555;
-            padding: 10px 20px;
-            font-size: 1rem;
-            border-radius: 5px;
+        .category-btn {
+            background: none;
+            border: none;
+            color: #888;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s ease;
+            text-transform: uppercase;
         }
 
-        button:hover {
-            background-color: #ffcc00;
-            color: #000000;
-            border-color: #ffcc00;
+        .category-btn.active {
+            color: #4caf50;
+            border-bottom: 2px solid #4caf50;
+        }
+
+        .element-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 40px;
+        }
+
+        .element-btn {
+            background-color: #2a2a2a;
+            color: #eee;
+            border: 1px solid #3a3a3a;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .element-btn:hover {
+            background-color: #3a3a3a;
+            border-color: #555;
+        }
+
+        .element-btn.active {
+            background-color: var(--elem-color, #4caf50);
+            color: #000;
+            font-weight: bold;
+            border-color: transparent;
+        }
+
+        .bottom-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .action-btn {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .action-btn:hover {
+            background-color: #f44336;
         }
     </style>
 </head>
 <body>
 
     <h1>Sandpixels</h1>
-    <p>Clique e arraste com o mouse na tela para soltar pixels de areia!</p>
+    <div class="subtitle">Selecione os elementos abaixo para criar reações físicas e químicas!</div>
 
-    <div id="game-container">
-        <canvas id="sandCanvas"></canvas>
-    </div>
+    <div id="game-wrapper">
+        <div id="canvas-container">
+            <canvas id="sandCanvas"></canvas>
+        </div>
 
-    <div class="controls">
-        <button id="clearBtn">Limpar Tela</button>
+        <div class="ui-panel">
+            <!-- Categorias -->
+            <div class="category-row" id="categories">
+                <button class="category-btn active" onclick="switchCategory('solids')">Sólidos</button>
+                <button class="category-btn" onclick="switchCategory('liquids')">Líquidos</button>
+                <button class="category-btn" onclick="switchCategory('gases')">Gases</button>
+                <button class="category-btn" onclick="switchCategory('special')">Especiais</button>
+            </div>
+            
+            <!-- Elementos da Categoria Selecionada -->
+            <div class="element-grid" id="elements"></div>
+        </div>
+
+        <div class="bottom-controls">
+            <div id="current-info" style="font-size: 0.9rem; color: #aaa;">Elemento: <span id="elem-name" style="font-weight:bold; color: #fff;">Areia</span></div>
+            <button class="action-btn" id="clearBtn">Limpar Tudo</button>
+        </div>
     </div>
 
     <script>
         const canvas = document.getElementById('sandCanvas');
         const ctx = canvas.getContext('2d');
         const clearBtn = document.getElementById('clearBtn');
+        const elementsGrid = document.getElementById('elements');
+        const elemNameDisplay = document.getElementById('elem-name');
 
-        // Configurações do Grid de Pixels
-        const CELL_SIZE = 4; // Tamanho de cada pixel de areia
-        const WIDTH = 150;   // Quantidade de colunas
-        const HEIGHT = 120;  // Quantidade de linhas
+        // Configuração da Matrix (Resolução interna pixelada)
+        const CELL_SIZE = 4;
+        const WIDTH = 150;
+        const HEIGHT = 110;
 
         canvas.width = WIDTH * CELL_SIZE;
         canvas.height = HEIGHT * CELL_SIZE;
 
-        // Cria a matriz do jogo (0 = vazio, valores > 0 representam cores de areia)
+        // Definição Completa de Elementos (Estilo Sandboxels)
+        const ELEMENTS = {
+            // SÓLIDOS
+            sand: { name: "Areia", color: "#e0b034", cat: "solids", type: "powder" },
+            wood: { name: "Madeira", color: "#8b5a2b", cat: "solids", type: "solid", flammable: true },
+            stone: { name: "Pedra", color: "#7a7a7a", cat: "solids", type: "solid" },
+            plant: { name: "Planta", color: "#2e8b57", cat: "solids", type: "solid", flammable: true },
+            
+            // LÍQUIDOS
+            water: { name: "Água", color: "#4169e1", cat: "liquids", type: "liquid" },
+            oil: { name: "Óleo", color: "#b8860b", cat: "liquids", type: "liquid", flammable: true },
+            acid: { name: "Ácido", color: "#00ff00", cat: "liquids", type: "liquid" },
+
+            // GASES
+            smoke: { name: "Fumaça", color: "#555555", cat: "gases", type: "gas" },
+            steam: { name: "Vapor", color: "#cccccc", cat: "gases", type: "gas" },
+
+            // ESPECIAIS
+            fire: { name: "Fogo", color: "#ff4500", cat: "special", type: "energy" },
+            eraser: { name: "Borracha", color: "#ff00ff", cat: "special", type: "tool" }
+        };
+
+        let currentElement = 'sand';
+        let currentCategory = 'solids';
+
+        // Criação e inicialização das matrizes de estado do jogo
+        // Cada célula guarda um objeto { id: 'sand', color: '#...', lifetime: 0 } ou 0 para vazio
         let grid = makeGrid();
         let isDrawing = false;
 
         function makeGrid() {
             let arr = new Array(WIDTH);
-            for (let i = 0; i < arr.length; i++) {
-                arr[i] = new Array(HEIGHT).fill(0);
+            for (let x = 0; x < WIDTH; x++) {
+                arr[x] = new Array(HEIGHT).fill(0);
             }
             return arr;
         }
 
-        // Eventos de Mouse para Adicionar Areia
-        canvas.addEventListener('mousedown', (e) => { isDrawing = true; addSand(e); });
-        window.addEventListener('mouseup', () => isDrawing = false);
-        canvas.addEventListener('mousemove', (e) => { if (isDrawing) addSand(e); });
+        // Renderiza botões baseados na categoria ativa
+        function updateUI() {
+            elementsGrid.innerHTML = '';
+            for (let key in ELEMENTS) {
+                if (ELEMENTS[key].cat === currentCategory) {
+                    const btn = document.createElement('button');
+                    btn.className = `element-btn ${currentElement === key ? 'active' : ''}`;
+                    btn.innerText = ELEMENTS[key].name;
+                    btn.style.setProperty('--elem-color', ELEMENTS[key].color);
+                    if(ELEMENTS[key].color === "#ffffff" || ELEMENTS[key].color === "#00ff00" || ELEMENTS[key].color === "#cccccc") {
+                        btn.style.color = "#000";
+                    }
+                    btn.onclick = () => selectElement(key);
+                    elementsGrid.appendChild(btn);
+                }
+            }
+            elemNameDisplay.innerText = ELEMENTS[currentElement].name;
+            elemNameDisplay.style.color = ELEMENTS[currentElement].color;
+        }
 
-        // Suporte para Telas Touch (Mobile)
-        canvas.addEventListener('touchstart', (e) => { isDrawing = true; addSand(e.touches[0]); });
-        window.addEventListener('touchend', () => isDrawing = false);
-        canvas.addEventListener('touchmove', (e) => { if (isDrawing) addSand(e.touches[0]); });
-
-        function addSand(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-
-            // Adiciona um bloco 3x3 de areia para facilitar a pintura
-            const matrixSize = 3;
-            const extent = Math.floor(matrixSize / 2);
+        function switchCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
             
-            for (let i = -extent; i <= extent; i++) {
-                for (let j = -extent; j <= extent; j++) {
-                    if (Math.random() > 0.3) { // Dá uma variação natural de spray
-                        const col = x + i;
-                        const row = y + j;
-                        if (col >= 0 && col < WIDTH && row >= 0 && row < HEIGHT) {
-                            // Gera uma cor aleatória em formato HSL (tons de amarelo/laranja/marrom)
-                            const hue = Math.floor(Math.random() * 25) + 35; 
-                            grid[col][row] = `hsl(${hue}, 100%, ${Math.floor(Math.random() * 30) + 40}%)`;
-                        }
-                    }
+            // Auto seleciona o primeiro elemento da nova categoria
+            for (let key in ELEMENTS) {
+                if (ELEMENTS[key].cat === cat) {
+                    currentElement = key;
+                    break;
                 }
             }
-        }
-
-        // Lógica de Física e Atualização
-        function updatePhysics() {
-            let nextGrid = makeGrid();
-
-            // Copia o estado atual
-            for (let x = 0; x < WIDTH; x++) {
-                for (let y = 0; y < HEIGHT; y++) {
-                    nextGrid[x][y] = grid[x][y];
-                }
-            }
-
-            // Atualiza de baixo para cima para que a gravidade funcione corretamente
-            for (let x = 0; x < WIDTH; x++) {
-                for (let y = HEIGHT - 1; y >= 0; y--) {
-                    let state = grid[x][y];
-
-                    if (state !== 0) {
-                        let below = y + 1;
-                        let dir = Math.random() < 0.5 ? 1 : -1; // Direção aleatória para os lados
-
-                        // Se o pixel abaixo estiver livre, cai
-                        if (below < HEIGHT && grid[x][below] === 0 && nextGrid[x][below] === 0) {
-                            nextGrid[x][below] = state;
-                            nextGrid[x][y] = 0;
-                        } 
-                        // Se o pixel abaixo estiver ocupado, tenta deslizar para as diagonais
-                        else if (below < HEIGHT && x + dir >= 0 && x + dir < WIDTH && grid[x + dir][below] === 0 && nextGrid[x + dir][below] === 0) {
-                            nextGrid[x + dir][below] = state;
-                            nextGrid[x][y] = 0;
-                        } 
-                        else if (below < HEIGHT && x - dir >= 0 && x - dir < WIDTH && grid[x - dir][below] === 0 && nextGrid[x - dir][below] === 0) {
-                            nextGrid[x - dir][below] = state;
-                            nextGrid[x][y] = 0;
-                        }
-                    }
-                }
-            }
-            grid = nextGrid;
-        }
-
-        // Renderização visual na Tela
-        function draw() {
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            for (let x = 0; x < WIDTH; x++) {
-                for (let y = 0; y < HEIGHT; y++) {
-                    if (grid[x][y] !== 0) {
-                        ctx.fillStyle = grid[x][y];
-                        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                    }
-                }
-            }
-        }
-
-        // Loop principal do Jogo
-        function loop() {
-            updatePhysics();
-            draw();
-            requestAnimationFrame(loop);
-        }
-
-        // Botão de Limpar
-        clearBtn.addEventListener('click', () => {
-            grid = makeGrid();
-        });
-
-        // Inicia o jogo
-        loop();
-    </script>
-</body>
-</html>
