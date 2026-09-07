@@ -10,6 +10,7 @@
             padding: 0;
             box-sizing: border-box;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         body {
@@ -20,28 +21,22 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            padding: 20px;
+            padding: 15px;
         }
 
         h1 {
-            font-size: 2.2rem;
+            font-size: 2rem;
             color: #4caf50;
             margin-bottom: 5px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .subtitle {
-            font-size: 0.9rem;
-            color: #888;
-            margin-bottom: 15px;
+            letter-spacing: 1px;
         }
 
         #game-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             width: 100%;
-            max-width: 700px;
+            max-width: 800px;
         }
 
         #canvas-container {
@@ -62,7 +57,6 @@
             cursor: crosshair;
         }
 
-        /* Interface estilo Sandboxels */
         .ui-panel {
             background-color: #1e1e1e;
             border: 1px solid #2d2d2d;
@@ -72,34 +66,36 @@
 
         .category-row {
             display: flex;
-            gap: 8px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #333;
+            gap: 5px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #2d2d2d;
             padding-bottom: 8px;
             overflow-x: auto;
         }
 
         .category-btn {
-            background: none;
-            border: none;
-            color: #888;
-            padding: 4px 10px;
-            font-size: 0.85rem;
+            background: #252525;
+            border: 1px solid #333;
+            color: #aaa;
+            padding: 6px 12px;
+            font-size: 0.8rem;
             font-weight: bold;
             cursor: pointer;
+            border-radius: 4px;
             text-transform: uppercase;
         }
 
         .category-btn.active {
-            color: #4caf50;
-            border-bottom: 2px solid #4caf50;
+            color: #ffffff;
+            background-color: #4caf50;
+            border-color: #4caf50;
         }
 
         .element-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
-            min-height: 40px;
+            gap: 6px;
+            min-height: 50px;
         }
 
         .element-btn {
@@ -107,10 +103,10 @@
             color: #eee;
             border: 1px solid #3a3a3a;
             padding: 6px 12px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.1s ease;
         }
 
         .element-btn:hover {
@@ -120,15 +116,25 @@
 
         .element-btn.active {
             background-color: var(--elem-color, #4caf50);
-            color: #000;
+            color: #000 !important;
             font-weight: bold;
             border-color: transparent;
+            box-shadow: 0 0 8px var(--elem-color);
         }
 
         .bottom-controls {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background-color: #1e1e1e;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #2d2d2d;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            color: #aaa;
         }
 
         .action-btn {
@@ -139,6 +145,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 0.85rem;
         }
 
         .action-btn:hover {
@@ -149,7 +156,7 @@
 <body>
 
     <h1>Sandpixels</h1>
-    <div class="subtitle">Selecione os elementos abaixo para criar reações físicas e químicas!</div>
+    <p style="font-size: 0.85rem; color: #888; margin-bottom: 15px;">Simulador estilo Sandboxels em tempo real</p>
 
     <div id="game-wrapper">
         <div id="canvas-container">
@@ -158,19 +165,22 @@
 
         <div class="ui-panel">
             <!-- Categorias -->
-            <div class="category-row" id="categories">
-                <button class="category-btn active" onclick="switchCategory('solids')">Sólidos</button>
-                <button class="category-btn" onclick="switchCategory('liquids')">Líquidos</button>
-                <button class="category-btn" onclick="switchCategory('gases')">Gases</button>
-                <button class="category-btn" onclick="switchCategory('special')">Especiais</button>
+            <div class="category-row">
+                <button class="category-btn active" data-cat="solids">Sólidos</button>
+                <button class="category-btn" data-cat="liquids">Líquidos</button>
+                <button class="category-btn" data-cat="gases">Gases</button>
+                <button class="category-btn" data-cat="special">Especiais</button>
             </div>
             
-            <!-- Elementos da Categoria Selecionada -->
+            <!-- Grid de Elementos Dinâmicos -->
             <div class="element-grid" id="elements"></div>
         </div>
 
         <div class="bottom-controls">
-            <div id="current-info" style="font-size: 0.9rem; color: #aaa;">Elemento: <span id="elem-name" style="font-weight:bold; color: #fff;">Areia</span></div>
+            <div class="info-text">
+                Elemento: <span id="elem-name" style="font-weight:bold;">Areia</span> | 
+                Pixels: <span id="pixel-count" style="color: #4caf50; font-weight: bold;">0</span>
+            </div>
             <button class="action-btn" id="clearBtn">Limpar Tudo</button>
         </div>
     </div>
@@ -181,42 +191,45 @@
         const clearBtn = document.getElementById('clearBtn');
         const elementsGrid = document.getElementById('elements');
         const elemNameDisplay = document.getElementById('elem-name');
+        const pixelCountDisplay = document.getElementById('pixel-count');
 
-        // Configuração da Matrix (Resolução interna pixelada)
+        // Configuração da Resolução Interna Pixelada
         const CELL_SIZE = 4;
-        const WIDTH = 150;
+        const WIDTH = 160;
         const HEIGHT = 110;
 
         canvas.width = WIDTH * CELL_SIZE;
         canvas.height = HEIGHT * CELL_SIZE;
 
-        // Definição Completa de Elementos (Estilo Sandboxels)
+        // Banco de Dados Completo de Elementos (Estilo Sandboxels)
         const ELEMENTS = {
             // SÓLIDOS
             sand: { name: "Areia", color: "#e0b034", cat: "solids", type: "powder" },
             wood: { name: "Madeira", color: "#8b5a2b", cat: "solids", type: "solid", flammable: true },
             stone: { name: "Pedra", color: "#7a7a7a", cat: "solids", type: "solid" },
             plant: { name: "Planta", color: "#2e8b57", cat: "solids", type: "solid", flammable: true },
+            salt: { name: "Sal", color: "#ffffff", cat: "solids", type: "powder" },
+            ice: { name: "Gelo", color: "#a5f2f3", cat: "solids", type: "solid" },
             
             // LÍQUIDOS
             water: { name: "Água", color: "#4169e1", cat: "liquids", type: "liquid" },
             oil: { name: "Óleo", color: "#b8860b", cat: "liquids", type: "liquid", flammable: true },
             acid: { name: "Ácido", color: "#00ff00", cat: "liquids", type: "liquid" },
+            lava: { name: "Lava", color: "#ff4500", cat: "liquids", type: "liquid" },
 
             // GASES
             smoke: { name: "Fumaça", color: "#555555", cat: "gases", type: "gas" },
             steam: { name: "Vapor", color: "#cccccc", cat: "gases", type: "gas" },
+            gasoline: { name: "Gás Combus.", color: "#a49b80", cat: "gases", type: "gas", flammable: true },
 
             // ESPECIAIS
-            fire: { name: "Fogo", color: "#ff4500", cat: "special", type: "energy" },
+            fire: { name: "Fogo", color: "#ff6600", cat: "special", type: "energy" },
+            cinder: { name: "Cinza", color: "#3a3a3a", cat: "special", type: "powder" },
             eraser: { name: "Borracha", color: "#ff00ff", cat: "special", type: "tool" }
         };
 
         let currentElement = 'sand';
         let currentCategory = 'solids';
-
-        // Criação e inicialização das matrizes de estado do jogo
-        // Cada célula guarda um objeto { id: 'sand', color: '#...', lifetime: 0 } ou 0 para vazio
         let grid = makeGrid();
         let isDrawing = false;
 
@@ -228,35 +241,13 @@
             return arr;
         }
 
-        // Renderiza botões baseados na categoria ativa
-        function updateUI() {
+        // Renderiza perfeitamente os botões corrigidos
+        function renderUI() {
             elementsGrid.innerHTML = '';
             for (let key in ELEMENTS) {
                 if (ELEMENTS[key].cat === currentCategory) {
                     const btn = document.createElement('button');
-                    btn.className = `element-btn ${currentElement === key ? 'active' : ''}`;
+                    btn.className = 'element-btn';
+                    if (currentElement === key) btn.classList.add('active');
                     btn.innerText = ELEMENTS[key].name;
                     btn.style.setProperty('--elem-color', ELEMENTS[key].color);
-                    if(ELEMENTS[key].color === "#ffffff" || ELEMENTS[key].color === "#00ff00" || ELEMENTS[key].color === "#cccccc") {
-                        btn.style.color = "#000";
-                    }
-                    btn.onclick = () => selectElement(key);
-                    elementsGrid.appendChild(btn);
-                }
-            }
-            elemNameDisplay.innerText = ELEMENTS[currentElement].name;
-            elemNameDisplay.style.color = ELEMENTS[currentElement].color;
-        }
-
-        function switchCategory(cat) {
-            currentCategory = cat;
-            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            // Auto seleciona o primeiro elemento da nova categoria
-            for (let key in ELEMENTS) {
-                if (ELEMENTS[key].cat === cat) {
-                    currentElement = key;
-                    break;
-                }
-            }
