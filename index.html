@@ -1,1 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sandpixels</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            color: #ffcc00;
+            text-shadow: 2px 2px #000;
+        }
+
+        p {
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            color: #aaaaaa;
+        }
+
+        #game-container {
+            position: relative;
+            background: #000000;
+            border: 4px solid #333333;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            cursor: crosshair;
+        }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            background-color: #333333;
+            color: white;
+            border: 2px solid #555555;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #ffcc00;
+            color: #000000;
+            border-color: #ffcc00;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Sandpixels</h1>
+    <p>Clique e arraste com o mouse na tela para soltar pixels de areia!</p>
+
+    <div id="game-container">
+        <canvas id="sandCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="clearBtn">Limpar Tela</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('sandCanvas');
+        const ctx = canvas.getContext('2d');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // Configurações do Grid de Pixels
+        const CELL_SIZE = 4; // Tamanho de cada pixel de areia
+        const WIDTH = 150;   // Quantidade de colunas
+        const HEIGHT = 120;  // Quantidade de linhas
+
+        canvas.width = WIDTH * CELL_SIZE;
+        canvas.height = HEIGHT * CELL_SIZE;
+
+        // Cria a matriz do jogo (0 = vazio, valores > 0 representam cores de areia)
+        let grid = makeGrid();
+        let isDrawing = false;
+
+        function makeGrid() {
+            let arr = new Array(WIDTH);
+            for (let i = 0; i < arr.length; i++) {
+                arr[i] = new Array(HEIGHT).fill(0);
+            }
+            return arr;
+        }
+
+        // Eventos de Mouse para Adicionar Areia
+        canvas.addEventListener('mousedown', (e) => { isDrawing = true; addSand(e); });
+        window.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mousemove', (e) => { if (isDrawing) addSand(e); });
+
+        // Suporte para Telas Touch (Mobile)
+        canvas.addEventListener('touchstart', (e) => { isDrawing = true; addSand(e.touches[0]); });
+        window.addEventListener('touchend', () => isDrawing = false);
+        canvas.addEventListener('touchmove', (e) => { if (isDrawing) addSand(e.touches[0]); });
+
+        function addSand(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+
+            // Adiciona um bloco 3x3 de areia para facilitar a pintura
+            const matrixSize = 3;
+            const extent = Math.floor(matrixSize / 2);
+            
+            for (let i = -extent; i <= extent; i++) {
+                for (let j = -extent; j <= extent; j++) {
+                    if (Math.random() > 0.3) { // Dá uma variação natural de spray
+                        const col = x + i;
+                        const row = y + j;
+                        if (col >= 0 && col < WIDTH && row >= 0 && row < HEIGHT) {
+                            // Gera uma cor aleatória em formato HSL (tons de amarelo/laranja/marrom)
+                            const hue = Math.floor(Math.random() * 25) + 35; 
+                            grid[col][row] = `hsl(${hue}, 100%, ${Math.floor(Math.random() * 30) + 40}%)`;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Lógica de Física e Atualização
+        function updatePhysics() {
+            let nextGrid = makeGrid();
+
+            // Copia o estado atual
+            for (let x = 0; x < WIDTH; x++) {
+                for (let y = 0; y < HEIGHT; y++) {
+                    nextGrid[x][y] = grid[x][y];
+                }
+            }
+
+            // Atualiza de baixo para cima para que a gravidade funcione corretamente
+            for (let x = 0; x < WIDTH; x++) {
+                for (let y = HEIGHT - 1; y >= 0; y--) {
+                    let state = grid[x][y];
+
+                    if (state !== 0) {
+                        let below = y + 1;
+                        let dir = Math.random() < 0.5 ? 1 : -1; // Direção aleatória para os lados
+
+                        // Se o pixel abaixo estiver livre, cai
+                        if (below < HEIGHT && grid[x][below] === 0 && nextGrid[x][below] === 0) {
+                            nextGrid[x][below] = state;
+                            nextGrid[x][y] = 0;
+                        } 
+                        // Se o pixel abaixo estiver ocupado, tenta deslizar para as diagonais
+                        else if (below < HEIGHT && x + dir >= 0 && x + dir < WIDTH && grid[x + dir][below] === 0 && nextGrid[x + dir][below] === 0) {
+                            nextGrid[x + dir][below] = state;
+                            nextGrid[x][y] = 0;
+                        } 
+                        else if (below < HEIGHT && x - dir >= 0 && x - dir < WIDTH && grid[x - dir][below] === 0 && nextGrid[x - dir][below] === 0) {
+                            nextGrid[x - dir][below] = state;
+                            nextGrid[x][y] = 0;
+                        }
+                    }
+                }
+            }
+            grid = nextGrid;
+        }
+
+        // Renderização visual na Tela
+        function draw() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let x = 0; x < WIDTH; x++) {
+                for (let y = 0; y < HEIGHT; y++) {
+                    if (grid[x][y] !== 0) {
+                        ctx.fillStyle = grid[x][y];
+                        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+        }
+
+        // Loop principal do Jogo
+        function loop() {
+            updatePhysics();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Botão de Limpar
+        clearBtn.addEventListener('click', () => {
+            grid = makeGrid();
+        });
+
+        // Inicia o jogo
+        loop();
+    </script>
+</body>
+</html>
